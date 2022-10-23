@@ -4,7 +4,7 @@ use anyhow::Result;
 use clap::Parser;
 use log::{error, info, LevelFilter};
 use mimalloc::MiMalloc;
-use mysql_async::{prelude::*, Pool};
+use mysql_async::{prelude::*, OptsBuilder, Pool, PoolConstraints, PoolOpts};
 use rand::{prelude::*, rngs::SmallRng, SeedableRng};
 use simple_logger::SimpleLogger;
 
@@ -26,10 +26,12 @@ struct Args {
 async fn main() -> Result<()> {
     SimpleLogger::new()
         .with_utc_timestamps()
-        .with_level(LevelFilter::Warn)
+        .with_level(LevelFilter::Info)
         .init()?;
     let args = Args::parse();
-    let pool = Pool::new("mysql://root@172.31.19.92:4000/test");
+    let pool_opts = PoolOpts::default().with_constraints(PoolConstraints::new(10, 256).unwrap());
+    let opts = OptsBuilder::from_opts("mysql://root@172.31.19.92:4000/test").pool_opts(pool_opts);
+    let pool = Pool::new(opts);
     for _ in 0..args.threads {
         let mut rng = SmallRng::from_entropy();
         let mut conn = pool.get_conn().await?;
